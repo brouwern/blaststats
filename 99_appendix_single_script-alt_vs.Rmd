@@ -1,0 +1,310 @@
+---
+title: "Altschul and Gish 1996 - Table 1, Take 1"
+author: "Nathan Brouwer"
+date: "10/29/2019"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.width = 5,fig.height = 2)
+
+```
+
+
+## Preliminaries
+
+### Packages / libraries
+
+```{r, message=F, warnings = F}
+library(Biostrings)  
+
+#install.packages("extRemes")
+library( extRemes)
+```
+
+
+
+## Polypeptitde simulation
+
+### Possible amino acids
+
+Make a vector of all letters that represent amino acid
+```{r}
+# 1 letter codes 
+aa1 <- c("A", "C", "D", "E", "F", "G", "H",
+         "I", "K", "L", "M", "N", "P", "G",
+         "R", "S", "T", "V", "W", "Y")
+
+
+aa3 <- c("Ala","Cys","Asp","Glu","Phe","Gly","His","Ile","Lys",
+  "Leu","Met","Asn","Pro","Gln","Arg","Ser","Thr","Val",
+  "Trp","Tyr")
+```
+
+
+Example: Randomly select a single amino acid with equal frequency
+
+```{r}
+sample(x = aa1, size = 1, replace = T)
+```
+
+
+
+Example: Make a vector of 200 amino acids (eg, a simulated polypeptide)
+
+```{r, echo = T}
+pp.length <- 20
+sample(x = aa1, size = pp.length, replace = T)
+```
+
+
+### Amino acid frequencies (Robinson & Robinson 1991)
+
+Amino acid frequencies from Robinson and Robinson (1991) "Distribution of glutamine and asparagine residues and their near neighbors in peptides and proteins." PNAS. (R & R 1991)
+
+Number of each amino acid reported in (R & R 1991).
+```{r}
+aa.count <- c(35155,8669,24161,28354,17367,
+              33229,9906,23161,25872,40625,
+              10101,20212,23435,19208,23105,
+              32070,26311,29012,5990,14488)
+```
+
+Check frequency; should sum to 450431
+```{r}
+aa.total <- sum(aa.count)
+aa.total 
+```
+
+
+### Setting up amino acid relative frequencies
+
+Create dataframe of amino acid frequencies (stringsAsFactors = F prevents a default R behavior which is annoying)
+
+```{r}
+robinson.aafreq <- data.frame(aa3,
+                              aa1,
+                              aa.count = aa.count, 
+                              stringsAsFactors = F)
+
+```
+
+
+Calculate **relative frequency** of each amino acid
+```{r}
+robinson.aafreq$aa.freq <- robinson.aafreq$aa.count/aa.total
+```
+
+Check that relative frequency sums to 1
+```{r}
+sum(robinson.aafreq$aa.freq)
+```
+
+
+## Example simulation experiment workflow 
+
+### Random sequence 1
+
+Create sequence
+```{r}
+seq1 <- sample(x = robinson.aafreq$aa1, 
+                  size = 191, 
+                  replace = TRUE, 
+                  prob = robinson.aafreq$aa.freq)
+```
+
+                
+                  
+Turn into string
+```{r}
+seq1 <- paste(seq1, sep = "",
+                  collapse = "")
+```
+
+
+### Random sequence 2
+
+```{r}
+# create sequence
+seq2 <- sample(x = robinson.aafreq$aa1, 
+                  size = 2981, 
+                  replace = TRUE, 
+                  prob = robinson.aafreq$aa.freq)
+
+# turn into a string
+seq2 <- paste(seq2, sep = "",collapse = "")
+
+```
+
+### Align simulated sequences
+```{r}
+alignment.i <- pairwiseAlignment(pattern = seq1, 
+                                   subject = seq2,
+                    type               = "local",
+                    substitutionMatrix = "BLOSUM62",
+                    gapOpening         = 12,
+                    gapExtension       = 1)
+
+
+```
+
+
+Look at alignment; note that for long alignments this can be abridged with a "..." in the middle
+```{r}
+alignment.i
+```
+
+
+### Process alignment
+
+#### Alignment score
+
+Score based on specified scoring matrix and indel parametres
+```{r}
+score.i         <- score(alignment.i)
+score.i
+```
+
+#### Alignment length
+
+Extract full alignment sequence as string with Biostrings::toString()
+```{r}
+alignment.seq.i <- toString(alignment.i)
+alignment.seq.i
+```
+
+Extract length of alignment with base R nchar() function
+```{r}
+length.i        <- nchar(alignment.seq.i)
+length.i
+```
+
+
+
+\pagebreak
+
+## Implement experiment as loop
+
+### Run experment for n = m = 191 amino acids
+
+The first row of Table 1, page 465 indicates that simulated sequences of 191 amino acids were investigated.  **In the original simulation 10000 iterations were carried out; we'll do just 1000.**
+
+#### for() loop for 191 amino acids
+
+```{r}
+# create dataframe to store scores
+random.scores <- data.frame(interation = 1:2000,
+                         score.i = NA,
+                         length.i = NA,
+                         seq.length1 = 191, 
+                         seq.length2 = 191)
+
+# for loop
+
+for(i in 1:2000){
+ seq1 <- sample(x = robinson.aafreq$aa1, 
+                  size = 191, 
+                  replace = TRUE, 
+                  prob = robinson.aafreq$aa.freq)
+ seq1 <- paste(seq1, sep = "",
+                  collapse = "")  
+ 
+ seq2 <- sample(x = robinson.aafreq$aa1, 
+                  size = 191, 
+                  replace = TRUE, 
+                  prob = robinson.aafreq$aa.freq)
+ seq2 <- paste(seq2, sep = "",
+                  collapse = "")
+ 
+ alignment.i <- pairwiseAlignment(pattern = seq1, 
+                                   subject = seq2,
+                    type               = "local",
+                    substitutionMatrix = "BLOSUM62",
+                    gapOpening         = 12,
+                    gapExtension       = 1)
+ score.i         <- score(alignment.i)
+ 
+ # cat("Iteration ", i)
+ # cat("score ", score.i)
+ # cat("\n")
+ 
+ alignment.seq.i <- toString(alignment.i)
+ 
+ length.i        <- nchar(alignment.seq.i)
+ 
+ 
+ random.scores$score.i[i]  <- score.i
+ random.scores$length.i[i] <- length.i
+
+}
+```
+
+#### Data analysis
+
+```{r, eval = F}
+head(random.scores)
+
+summary(random.scores)
+
+hist(random.scores$score.i,breaks = 20)
+
+```
+
+Deterine mode
+```{r}
+table.i <- table(random.scores$score.i)
+max(table.i)
+
+i.max <- which.max(table.i)
+table.i[i.max]
+
+mode.i <- names(table.i[i.max])
+mode.i <- as.numeric(mode.i)
+```
+
+
+```{r}
+hist(random.scores$score.i, breaks = 20)
+mean(random.scores$score.i)
+median(random.scores$score.i)
+
+abline(v = mode.i, col = 2, lwd = 4, lty = 2)
+```
+
+
+```{r}
+fit.gumbel <- fevd(random.scores$score.i, 
+                   type = "Gumbel",
+                   method = "MLE"
+                   )
+
+summary.gumbel <- summary(fit.gumbel)
+loc.param <- summary.gumbel$par[1]
+scale.parm  <- 1/summary.gumbel$par[2]
+
+
+
+#location     scale 
+
+par(mfrow = c(1,1))
+plot(fit.gumbel, type = "density")
+abline(v = loc.param, col = 2, lwd = 4, lty = 2)
+```
+
+
+
+
+### Run experment for n = m = 245 amino acids
+
+
+
+
+```{r}
+
+```
+
+

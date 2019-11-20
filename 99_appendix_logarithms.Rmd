@@ -1,0 +1,68 @@
+---
+title: 'Appendix: Logarithms in R'
+author: "Nathan Brouwer"
+date: "11/5/2019"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Logging splits up multiplication into addition.  So, log(m*n) is the same as log(m) + log(n)
+
+You can check this
+
+```{r}
+m<-10
+n<-11
+log(m*n)
+
+log(m)+log(n)
+
+log(m*n) == log(m)+log(n)
+```
+
+Exponentiation undoes logs
+
+```{r}
+exp(log(m*n))
+m*n
+```
+
+The key equation in BLAST's E values is 
+
+u = ln(K*m*n)/lambda
+
+
+This can be changed to 
+
+[ln(K) + ln(mn)]/lambda
+
+We can check this
+
+```{r}
+K <- 1
+m <- 10
+n <- 11
+lambda <- 110
+
+log(K*m*n)/lambda
+
+(log(K) + log(m*n))/lambda
+
+log(K*m*n)/lambda == (log(K) + log(m*n))/lambda
+
+```
+
+
+
+```{r}
+
+```
+

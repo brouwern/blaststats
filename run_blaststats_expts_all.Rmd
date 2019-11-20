@@ -1,0 +1,207 @@
+---
+title: "Altschul and Gish - Run experiment"
+author: "Nathan Brouwer"
+date: "10/29/2019"
+output:
+  pdf_document: default
+  html_document: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Preliminaries
+
+```{r, warnings = F, message = F}
+library(Biostrings)
+```
+
+
+
+## Amino acid frequencies
+
+```{r}
+# 1 letter codes 
+aa1 <- c("A", "C", "D", "E", "F", "G", "H",
+         "I", "K", "L", "M", "N", "P", "Q",
+         "R", "S", "T", "V", "W", "Y")
+
+
+aa3 <- c("Ala","Cys","Asp","Glu","Phe","Gly","His","Ile","Lys",
+  "Leu","Met","Asn","Pro","Gln","Arg","Ser","Thr","Val",
+  "Trp","Tyr")
+
+aa.count <- c(35155,8669,24161,28354,17367,
+              33229,9906,23161,25872,40625,
+              10101,20212,23435,19208,23105,
+              32070,26311,29012,5990,14488)
+
+robinson.aafreq <- data.frame(aa3,
+                              aa1,
+                              aa.count = aa.count, 
+                              stringsAsFactors = F)
+```
+
+
+## The r_molec_seq() function
+
+```{r}
+r_molec_seq <- function(units = c("A","T","C","G"),
+                            prob  = c(0.25,0.25,0.25,0.25),
+                            length = 100,
+                             as.string = TRUE){ 
+  
+  if(all(units  == c("A","T","C","G")) == TRUE &
+     all(prob   == c(0.25,0.25,0.25,0.25)) == TRUE &
+     length == 100){
+    warning("Note: all parameters set to defaults.  Did you want to change something?")
+     }
+  
+  seq.n.i <- sample(x = units, 
+                  size = length, 
+                  replace = TRUE, 
+                  prob = prob)
+  
+  if(as.string == TRUE){
+    seq.n.i <- paste(seq.n.i,sep = "",collapse = "") 
+  
+  }
+  
+  return(seq.n.i)
+  
+}
+```
+
+
+
+## The r_alignments_score_vs() function
+
+wrapper for Bistrongs::pairwiseAlignment()
+
+```{r}
+r_alignments_score <- function(seq.length1 = 1000,
+                                 seq.length2 = 1000,
+                                 aas = LETTERS[-c(5,8,15,21,24,26)],
+                                 aas.freqs = rep(1,20),
+                                 alignment.type = "local",
+                                 gap.open = 12, 
+                                 gap.extend = 1){
+  
+  if(length(aas) == 1){
+    if(aas == "ROBINSON")
+    {
+    aas.freqs <- c(35155,8669,24161,28354,17367,
+             33229,9906,23161,25872,40625,
+             10101,20212,23435,19208,23105,
+             32070,26311,29012,5990,14488)
+    aas.freqs<-aas.freqs/sum(aas.freqs)
+    
+    aas <- c("A","C","D","E","F",
+             "G","H","I","K","L",
+             "M","N","P","Q","R",
+             "S","T","V","W" ,"Y")
+    # TO DO: insert message: setting defaults to...
+    
+    }
+  }
+
+  # Create random sequences
+  ## create 1st sequence with sample()
+  seq.n.i <- r_molec_seq(units = aas,
+                prob = aas.freqs,
+                length = seq.length1)
+  
+  ## create 2nd sequence
+  seq.m.i <- r_molec_seq(units = aas,
+                prob = aas.freqs,
+                length = seq.length1)
+  
+
+  
+  # Align the sequences
+  alignment.i <- pairwiseAlignment(pattern = seq.n.i, 
+                                   subject = seq.m.i,
+                    type               = alignment.type,
+                    substitutionMatrix = "BLOSUM62",
+                    gapOpening         = gap.open,
+                    gapExtension       = gap.extend)
+  
+  # Extract information from the alignment
+  score.i         <- score(alignment.i)
+  alignment.seq.i <- toString(alignment.i)
+  length.i        <- nchar(alignment.seq.i)
+
+  
+  output  <- c(score.i,  length.i,  seq.length1,  seq.length2)
+  names(output) <- c("score.i","length.i","seq.length1",
+                     "seq.length2")
+  
+  return(output)
+}  
+```
+
+
+
+## run_blaststats_expt() function
+
+
+
+```{r}
+run_blaststats_expt <- function(iterations, 
+                     seq.length1 = 191,
+                     seq.length2 = 191,
+                     aas = robinson.aafreq$aa1,
+                     aas.freqs = robinson.aafreq$aa.freq.sum.aa.freq.){
+  #create dataframe
+  random.scores <- data.frame(interation = 1:iterations,
+                         score.i = NA,
+                         length.i = NA,
+                         seq.length1 = NA, 
+                         seq.length2 = NA)
+  
+  #loop
+  for(i in 1:iterations){
+  out.i <- r_alignments_score(seq.length1 = 2981, 
+                      seq.length2 = 2981, 
+                      aas = robinson.aafreq$aa1,
+                      aas.freqs = robinson.aafreq$aa.freq.sum.aa.freq.)
+  
+  random.scores[i,-1] <- out.i
+  }
+  
+  return(random.scores)
+                     
+}
+  
+
+
+
+```
+
+
+## Run simulation experiment
+
+Tabel 1 Sequence lengths
+
+```{r}
+seq.lengths <- c(191,245,314,403,518,665,854,1097,1408,1808,2322,2981)
+```
+
+191 
+```{r}
+expt191 <- run_blaststats_expt(iterations = 2000,
+                    seq.length1 = seq.lengths[1],
+                    seq.length2 = seq.lengths[1])
+```
+
+245
+```{r}
+expt245 <- run_blaststats_expt(iterations = 2000,
+                    seq.length1 = seq.lengths[2],
+                    seq.length2 = seq.lengths[2])
+```
+
+etc

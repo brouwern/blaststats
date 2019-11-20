@@ -1,0 +1,95 @@
+---
+title: '[Re] Local alignment statistics - Estimating K'
+author: "Nathan Brouwer"
+date: "11/18/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+## Estimating K
+
+Key to E values and P values for alignments are lambda and K.  From the extreme value distribution of scores we can get lambda and mu and need to calculate K.
+
+Plain text version of equation:
+
+mu = (ln(m x n x K))/lambda
+
+Rendered version of equation.
+
+
+
+$$\mu = \frac{ \ln(m*n*K)}{\lambda}$$
+
+We can re-arrange this to be
+
+$$\lambda*\mu = \ln(m*n*K)$$
+And then
+
+$$\exp(\lambda*\mu) = \exp(\ln(m*n*K))$$
+Which simplifies to
+
+$$\exp(\lambda*\mu) = m*n*K$$
+and then
+
+$$\frac{exp(\lambda*\mu)}{m*n}=K$$
+
+For ease let's flip that around
+$$K = \frac{exp(\lambda*\mu)}{m*n}$$
+
+We could also write it like this
+
+$$K = \frac{e^{\lambda*\mu}}{m*n}$$
+
+
+In R we can therefore get K like this (recall that m = n = 191, the length of the simulated sequences)
+
+```{r}
+m <- 191
+n <- 191
+
+mu.param  <- 26.18856
+scale.param <- 3.296625
+lambda.parm  <- 1/scale.param
+
+K <- (exp(lambda.parm*mu.param))/(m*n)
+K
+```
+
+An equivalent expression is worked out below, though I haven't derived it:
+```{r}
+exp(lambda.parm*mu.param - log(m*n))
+```
+
+
+
+
+
+## Summary 
+
+Once we've simulated data we can make a histogram of all of the alignment scores.  We can then use R functions to analyze the distribution of scores and estimate mu and lambda.  From mu and lambda we can calculate K.  In the first row of Table 1 Altchul and Gish (1996) report, for 10000 simulated sequences of n = m = 191:
+
+* mu = 26.45
+* lambda = 0.298
+* K = 0.073
+
+Using R we got
+```{r}
+mu.param
+lambda.parm
+K
+```
+
+These values are close.  The most likely reason for them not being closer is that we ran fewer simulations as  as the original paper, though there could be subtle numerical differences in parts of our procedure that are different than Altchul and Gish.
+
+```{r}
+
+```
+

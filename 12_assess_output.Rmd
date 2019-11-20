@@ -1,0 +1,260 @@
+---
+title: "[Re] Local alignment statistics - Compare to original table"
+author: "Nathan Brouwer"
+date: "10/29/2019"
+output:
+  pdf_document: default
+  html_document: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      #fig.width = 5,
+                      #fig.height = 2, 
+                      class.source = "numberLines", 
+                      class.output = "numberLines", 
+                      results='hold')
+
+
+```
+
+
+## Introduction
+
+Every run of a simulation will present different results.  Also, I am coding up my version of this simulation based just on the original article.  In the following code I generate plots telling me about how close I got to reproducing the original paper and whether 10000 simulations is enough to get a stable estimate of lambda and mu.  Also, I used a different statistical approach
+
+
+## Load data
+
+Load original version of the table
+```{r}
+table1 <- read.csv(file = "table1.csv")
+```
+
+Load my version of the table
+```{r}
+table1.NLB <- read.csv(file = "table1NLB.csv")
+```
+
+Load raw data from simulatoins
+```{r}
+load("~/1_R/git/blaststats/full_experiment.RData")
+```
+
+
+
+## Make diagnostic plots
+
+
+
+Plot the sequence lengths (m,n).  THis better work!  But always good to make sure a silly typo didn't enter in..
+
+The diagonal line is called a 1:1 and indicates a perfect correlation.
+```{r}
+plot(table1$mn ~ table1.NLB$mn, main = "sequence length: mn")
+abline(a = 0, b = 1)
+```
+
+Plot *alignment* length.  This is troubling!  Even though highly correlated the points don't fall on the line.  WOrse, there's **drift**, with the mean lenghts of the sequences being close on the short end but the difference grows.
+```{r}
+plot(table1$l ~ table1.NLB$l, xlim = c(20,55),ylim=c(20,55))
+abline(a = 0, b = 1)
+cor(table1$l , table1.NLB$l)
+
+```
+
+
+Another way to look at this is to plot sequence length against alignment length.  Both of these plots indicate that they were able to build alignments that were somewhat longer than those which I'm building.  I'm not sure why this is!
+```{r}
+#plot original data - black circles
+plot(table1$l ~ table1$mn)
+
+#plot my data - read triangels
+points(table1.NLB$l ~ table1.NLB$mn, col = 2, pch =2)
+```
+
+
+Compare the other paramters.  First  mu (I call it mu, on their table it u).  Same thing, there's drift.
+```{r}
+plot(table1$u ~ table1.NLB$mu,
+     xlab = "NLB mu (u)",
+     ylab = "Original mu (u)")
+abline(a = 0, b = 1)
+```
+
+
+I'll buid a quick table to compare the values.  There's between a 1 and 3% differene.  Not horrible, but not sure why its happening.
+```{r}
+cbind(table1$mn,
+      table1$u , 
+      table1.NLB$mu,
+      (table1$u - table1.NLB$mu)/table1$u*100)
+```
+
+
+Now lambda - this is kinda ugly! 
+```{r}
+plot(table1$lambda ~ table1.NLB$lambda,
+     xlab = "NLB lambda",
+     ylab = "Original lambda")
+abline(a = 0, b = 1)
+cor(table1$lambda , table1.NLB$lambda)
+cbind(table1$mn,table1$lambda , table1.NLB$lambda)
+table1$lambda - table1.NLB$lambda
+
+```
+
+K is pretty bad too.
+```{r}
+plot(table1$K ~ table1.NLB$K,
+     xlab = "NLB K",
+     ylab = "Original K")
+abline(a = 0, b = 1)
+cor(table1$K , table1.NLB$K)
+cbind(table1$mn,table1$K, table1.NLB$K)
+table1$K - table1.NLB$K
+```
+
+
+
+Upshot - somethings wrong.  I need to check that errors in older versions that I identified actually got fixed!.
+
+
+## Method of moments versus MLE
+
+The original paper used the "method of moments" statistical approach to estimate the parameters.  The extRemes package do this method, but EnvStats does not.  Both EnvStats and extReme do maximum likelihood estimation (MLE), so I can confirm that my results are dependent on the package I use, which is a good idea since estimating parameters of extreme value distributions is not an everyday statistical task and - most importantly - one I am not very familiar with.
+
+THe follwoing code fits a bunch of variations in the estimatation method, both MLE from two 
+```{r}
+#install.packages("EnvStats")
+library(EnvStats)
+library(extRemes)
+
+# methods of moments - EnvStats
+mme.191  <- eevd(random.scores.191$score.i, method = "mme")  # methods of moments
+mmue.191 <- eevd(random.scores.191$score.i, method = "mmue") # method of moments, unbiased estimator of variance
+pwme.191.a <- eevd(random.scores.191$score.i, method = "pwme") # method of moments, probability-weighted 
+pwme.191.b <- eevd(random.scores.191$score.i, method = "pwme", 
+                   pwme.method = "plotting.position") # method of moments, probability-weighted vs 2
+
+# max like - EnvStats
+mle.191  <- eevd(random.scores.191$score.i, method = "mle")  # mle
+
+# max like  - extRemes
+fevd.191 <- fit.gumbel.191 <- fevd(random.scores.191$score.i, 
+                   type = "Gumbel",
+                   method = "MLE")
+
+```
+
+
+I'll eyeball the comparison between statistcal methods.  They are very close for mu but scale (1/lambda) varys a lot more.  There defintely appears to be a difference in between method of moments and max like.
+```{r}
+rbind(eevd.mme  = mme.191$parameters,
+      eevd.mmue = mmue.191$parameters,
+      eevd.pwme.a = pwme.191.a$parameters,
+      eevd.pwme.b = pwme.191.b$parameters,
+      eevd.mle = mle.191$parameters,
+      fevd.mle = fevd.191$results$par)
+```
+
+
+
+## How many replications needed?
+
+While not relevant to understanding why my results are a bit off, its important to think about how many iterations of the experiment are necessary to get good estimtes of mu, lambda and k.  As is, it take about 5 hours to run all these simulations.  Maybe its possible to use fewer.
+
+In the code take the data for m = n = 191 and fit an extreme value distribution model at a range of sample sizes, from 100 to 10,000
+
+```{r}
+# how many rows in output?
+n.rows <- nrow(random.scores.191)
+
+
+# sequence of values - I don't want to do this for all 10,000 rows
+## I'll go by multiples of 100
+i.s <- seq(from = 100, to = nrow(random.scores.191),by = 100)
+
+#data frame for storage
+cummulative.params <- data.frame(i = i.s,
+                                 loc = rep(NA,length(i.s)),
+                                 scale = rep(NA,length(i.s)))
+
+for(i in 1:length(i.s)){
+  i.s.working <- i.s[i]
+  fit.gumbel.191 <- fevd(random.scores.191$score.i[1:i.s.working], 
+                   type = "Gumbel",
+                   method = "MLE")
+
+loc.param.191.i <- fit.gumbel.191$results$par[1]
+scale.param.191.i  <- 1/fit.gumbel.191$results$par[2]
+
+cummulative.params$loc[i] <- loc.param.191.i
+cummulative.params$scale[i] <- scale.param.191.i
+}
+
+
+```
+
+Plot location parameter agains the number of samples.  It gets pretty level by 10, though there does appear to be some drift upward.
+```{r}
+plot(loc ~ i, data = cummulative.params)
+abline(h = 26.45)
+abline(v = 10000)
+```
+
+Now the scale parameter.  This remains noisier
+```{r}
+plot(scale ~ i, data = cummulative.params)
+abline(h = 0.298)
+abline(v = 10000)
+```
+
+
+## How many replications needed? m = n = 2981
+
+```{r}
+# how many rows in output?
+n.rows <- nrow(random.scores.2981)
+
+
+# sequence of values - I don't want to do this for all 10,000 rows
+## I'll go by multiples of 100
+i.s <- seq(from = 100, to = nrow(random.scores.2981),by = 100)
+
+#data frame for storage
+cummulative.params <- data.frame(i = i.s,
+                                 loc = rep(NA,length(i.s)),
+                                 scale = rep(NA,length(i.s)))
+
+for(i in 1:length(i.s)){
+  i.s.working <- i.s[i]
+  fit.gumbel.191 <- fevd(random.scores.2981$score.i[1:i.s.working], 
+                   type = "Gumbel",
+                   method = "MLE")
+
+loc.param.191.i <- fit.gumbel.191$results$par[1]
+scale.param.191.i  <- 1/fit.gumbel.191$results$par[2]
+
+cummulative.params$loc[i] <- loc.param.191.i
+cummulative.params$scale[i] <- scale.param.191.i
+}
+
+
+par(mfrow = c(2,1))
+plot(loc ~ i, data = cummulative.params)
+abline(h = 26.45)
+
+plot(scale ~ i, data = cummulative.params)
+abline(h = 0.298)
+
+```
+
+
+```{r}
+
+```
+
