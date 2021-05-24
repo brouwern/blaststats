@@ -2,3 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+inst/doc
+.pdf
+.xls
+.xlsx
+.docx
+docs
+/doc/
+/Meta/

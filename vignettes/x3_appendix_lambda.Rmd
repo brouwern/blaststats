@@ -1,0 +1,78 @@
+---
+title: "Calculating lambda from the BLOSUM62 matrix"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Calculating lambda from the BLOSUM62 matrix}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, eval = T}
+library(blaststats)
+```
+
+
+
+
+
+This is an attempt to calculate lambda directly from a BLOSUM 62 matrix.  I don't think is was working to begin with, then my cat sat on the keyboard and possibly further messed with the code : ) so yeah, it doesn't work
+
+
+```{r}
+library(Biostrings)
+data("BLOSUM62")
+
+BLOSUM62
+
+
+
+BLOSUM62.2 <- BLOSUM62[1:20,1:20]
+BLOSUM62[21:25,21:25]
+
+robinson_aafreq$aa1
+colnames(BLOSUM62.2)
+i.reorder <- match(colnames(BLOSUM62.2),robinson_aafreq$aa1,)
+
+colnames(BLOSUM62.2)
+robinson_aafreq$aa1
+
+robinson_aafreq <- robinson_aafreq[i.reorder, ]
+
+colnames(BLOSUM62.2)
+robinson_aafreq$aa1
+
+#BLOSUM62.2[which(upper.tri(BLOSUM62.2) == TRUE)] <- NA
+
+lambdas.try  <- seq(0.001,0.4,by = 0.001)
+lambdas.out <- rep(NA,length(lambdas.try))
+for(l in 1:length(lambdas.try)){
+  output <- matrix(0,nrow = 20, ncol = 20)
+  lambda <- lambdas.try[l]
+  lambda <- 0.318
+  for(j in 1:20){
+  for(i in 1:20){
+    p.i <- robinson_aafreq$aa.freq[i]
+    p.j <- robinson_aafreq$aa.freq[j]
+    s.ij <- BLOSUM62.2[i,j]
+    output[i,j] <- p.i*p.j*exp(s.ij*lambda)
+  }
+  }
+  lambdas.out[l] <- sum(output, na.rm = T)
+}
+
+
+plot(lambdas.out ~ lambdas.try)
+abline(h = 1, col = 2)
+abline(v = 0.318)
+```
+
+

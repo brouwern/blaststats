@@ -1,0 +1,90 @@
+---
+title: "Local alignment statistics - Table 1 of Altchul and Gish 1996"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Local alignment statistics - Table 1 of Altchul and Gish 1996}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, eval = F}
+library(blaststats)
+```
+
+
+
+
+
+## The original table
+
+The code reproduces the original table and some calculations in the original paper.
+
+### Original data
+
+```{r}
+#sequence length (this is NOT m*n)
+mn          <- c(191,245,314,403,518,665,854,1097,1408,1808,2322,2981)
+
+# mean length of alignments
+l.orig      <- c(22.6 ,25.8 ,29.4, 32.4,36.3,40.3,43.9,48.1,51.6,55.1,59.1,63.5)
+
+# log(m*n)
+## this is the log of the search space
+## eg log(search space)
+ln.n.m.     <- c(10.25, 10.78,11.30,11.83,12.35,12.87,13.39,13.91,14.43,14.94,15.45,15.96)
+
+# u (mu)
+u.orig      <- c(26.45,28.31,30.21,32.04,33.92,35.94,37.84,39.75,41.71,43.54,45.53,47.32)
+
+
+# lambda
+lambda.orig <- c(0.298,0.286,0.282,0.275,0.279,0.273,0.272,0.275,0.268,0.271,0.267,0.270)
+
+# K
+K.orig      <- c(0.073,0.055,0.051,0.041,0.048,0.041,0.040,0.046,0.036,0.041,0.035,0.040)
+
+```
+
+
+### Create table
+
+```{r}
+table1 <- data.frame(mn = mn,
+                     l = l.orig,
+           ln.nm = round(log(mn*mn),3),
+           ln.n.m.,
+           u = u.orig,
+           lambda = lambda.orig,
+           K = K.orig)
+```
+
+Look at the table
+
+```{r}
+table1
+```
+
+
+## Save the table
+
+```{r, eval = F}
+write.csv(table1,file = "table1.csv", row.names = F)
+```
+
+
+```{r, echo = F, eval = F}
+loc. <- here::here("data-raw")
+file. <- "table1.csv"
+file.full <- here::here(loc., file.)
+write.csv(table1, file = file.full, row.names = F)
+```
+

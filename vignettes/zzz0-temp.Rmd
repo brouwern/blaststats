@@ -1,0 +1,21 @@
+---
+title: "xxx-notes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{xxx-notes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+## Skills / tasks
+
+Build dataframe by hand (Table 1, Amino acid frequencies of Robinson & Robinson 1991)
